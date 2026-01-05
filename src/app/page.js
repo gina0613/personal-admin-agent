@@ -6,7 +6,7 @@ export default function Home() {
   const [input, setInput] = useState('');
   const { messages, sendMessage, status } = useChat();
 
-  const isLoading = status === 'streaming' || status === 'pending';
+  const isLoading = status === 'streaming' || status === 'submitted';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -52,9 +52,6 @@ export default function Home() {
                                   ))}
                                 </div>
                               )}
-                              {(part.state === 'call' || part.state === 'partial-call') && (
-                                <div>⏳ Finding slots...</div>
-                              )}
                             </div>
                           );
                         }
@@ -64,6 +61,12 @@ export default function Home() {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div style={{ whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontWeight: 600 }}>AI</div>
+                <div style={{ color: '#666' }}>⏳ Thinking...</div>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginTop: 16 }}>
