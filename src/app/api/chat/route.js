@@ -40,6 +40,42 @@ export async function POST(req) {
           return { date, freeSlots: slots };
         },
       }),
+      emailDraft: tool({
+        description: 'Generate an email draft. Use this when user wants to write, draft, or compose an email. YOU must generate the subject and body content.',
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            to: {
+              type: 'string',
+              description: 'Recipient email or name',
+            },
+            subject: {
+              type: 'string',
+              description: 'The email subject line - generate this based on the purpose',
+            },
+            body: {
+              type: 'string',
+              description: 'The full email body content - generate this based on the purpose and tone',
+            },
+            tone: {
+              type: 'string',
+              enum: ['formal', 'casual', 'friendly'],
+              description: 'The tone used for the email',
+            },
+          },
+          required: ['to', 'subject', 'body'],
+        }),
+        execute: async ({ to, subject, body, tone = 'formal' }) => {
+          // Return the draft for display in UI
+          return {
+            to,
+            subject,
+            body,
+            tone,
+            createdAt: new Date().toISOString(),
+          };
+        },
+      }),
     },
   });
 
