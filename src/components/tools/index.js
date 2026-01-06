@@ -1,10 +1,12 @@
 import EmailDraft from './EmailDraft';
 import FreeSlots from './FreeSlots';
+import TodoCreate from './TodoCreate';
 import GenericTool from './GenericTool';
 
 const toolComponents = {
   emailDraft: EmailDraft,
   findFreeSlots: FreeSlots,
+  todoCreate: TodoCreate,
 };
 
 export default function ToolRenderer({ part }) {

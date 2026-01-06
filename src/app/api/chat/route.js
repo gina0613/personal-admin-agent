@@ -1,6 +1,7 @@
 import { streamText, convertToModelMessages, tool, jsonSchema } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { findFreeSlots } from '@/lib/calendar';
+import { createTodo, getTodos } from '@/lib/todos';
 
 export async function POST(req) {
   const body = await req.json();
@@ -74,6 +75,32 @@ export async function POST(req) {
             tone,
             createdAt: new Date().toISOString(),
           };
+        },
+      }),
+      todoCreate: tool({
+        description: 'Create a new todo/task item. Use this when user wants to add, create, or remember a task.',
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'The todo title/description',
+            },
+            priority: {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'Priority level. Default is medium.',
+            },
+            dueDate: {
+              type: 'string',
+              description: 'Due date in YYYY-MM-DD format (optional)',
+            },
+          },
+          required: ['title'],
+        }),
+        execute: async ({ title, priority = 'medium', dueDate = null }) => {
+          const todo = await createTodo(title, priority, dueDate);
+          return todo;
         },
       }),
     },

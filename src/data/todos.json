@@ -1,0 +1,40 @@
+{
+  "todos": [
+    {
+      "id": "1",
+      "title": "Review project proposal",
+      "completed": false,
+      "createdAt": "2026-01-05T10:00:00Z"
+    },
+    {
+      "id": "2",
+      "title": "Send weekly report",
+      "completed": true,
+      "createdAt": "2026-01-04T09:00:00Z"
+    },
+    {
+      "id": "1767663489015",
+      "title": "Call John",
+      "priority": "high",
+      "dueDate": "2026-01-07",
+      "completed": false,
+      "createdAt": "2026-01-06T01:38:09.015Z"
+    },
+    {
+      "id": "1767663505621",
+      "title": "Complete homework",
+      "priority": "medium",
+      "dueDate": "2026-01-07",
+      "completed": false,
+      "createdAt": "2026-01-06T01:38:25.621Z"
+    },
+    {
+      "id": "1767663547090",
+      "title": "Workout",
+      "priority": "medium",
+      "dueDate": "2026-01-07",
+      "completed": false,
+      "createdAt": "2026-01-06T01:39:07.090Z"
+    }
+  ]
+}
