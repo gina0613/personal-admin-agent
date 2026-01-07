@@ -19,10 +19,17 @@ export async function POST(req) {
   const today = new Date().toISOString().split('T')[0];
 
   const result = await streamText({
-    model: openai('gpt-4o-mini'),
-    system: `You are a helpful assistant that provides concise answers. Today's date is ${today}.`,
+    model: openai('gpt-4o'),
+    system: `You are a helpful personal assistant that manages calendar, emails, and todos. Today's date is ${today}.
+
+When a task requires multiple steps:
+1. Call the necessary tools in sequence
+2. Use results from previous tools to inform the next tool call
+3. For meeting scheduling: first find free slots, then draft the email with options
+
+Always be proactive - if user asks to schedule a meeting AND send an email, do both.`,
     messages: modelMessages,
-    maxSteps: 3,
+    maxSteps: 5,
     tools: {
       findFreeSlots: tool({
         description: 'Find available/free time slots in the calendar for a given date. Use this when user asks about availability, free time, or open slots.',
