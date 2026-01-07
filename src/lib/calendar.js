@@ -89,3 +89,30 @@ export async function getEventsForDate(date) {
   const events = await getEvents();
   return events.filter(event => event.start.startsWith(date));
 }
+
+/**
+ * Create a new calendar event
+ * @param {string} title - Event title
+ * @param {string} start - Start time in ISO format (YYYY-MM-DDTHH:mm:ss)
+ * @param {string} end - End time in ISO format
+ * @param {string[]} attendees - List of attendee names/emails
+ */
+export async function createEvent(title, start, end, attendees = []) {
+  const filePath = path.join(process.cwd(), 'src/data/calendar.json');
+  const data = await fs.readFile(filePath, 'utf-8');
+  const calendar = JSON.parse(data);
+
+  const newEvent = {
+    id: Date.now().toString(),
+    title,
+    start,
+    end,
+    attendees,
+    createdAt: new Date().toISOString(),
+  };
+
+  calendar.events.push(newEvent);
+  await fs.writeFile(filePath, JSON.stringify(calendar, null, 2));
+
+  return newEvent;
+}

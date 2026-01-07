@@ -110,6 +110,48 @@ Always be proactive - if user asks to schedule a meeting AND send an email, do b
           return todo;
         },
       }),
+      calendarCreateEvent: tool({
+        description: 'Create a new calendar event. Use this when user wants to add, create, or schedule an event on their calendar. The event will require user confirmation before being saved.',
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'Event title/name',
+            },
+            date: {
+              type: 'string',
+              description: 'Date in YYYY-MM-DD format',
+            },
+            startTime: {
+              type: 'string',
+              description: 'Start time in HH:MM format (24-hour)',
+            },
+            endTime: {
+              type: 'string',
+              description: 'End time in HH:MM format (24-hour)',
+            },
+            attendees: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of attendee names or emails (optional)',
+            },
+          },
+          required: ['title', 'date', 'startTime', 'endTime'],
+        }),
+        execute: async ({ title, date, startTime, endTime, attendees = [] }) => {
+          // Return preview for confirmation - NOT saved yet
+          return {
+            pending: true,
+            event: {
+              title,
+              start: `${date}T${startTime}:00`,
+              end: `${date}T${endTime}:00`,
+              attendees,
+            },
+          };
+        },
+      }),
     },
   });
 
