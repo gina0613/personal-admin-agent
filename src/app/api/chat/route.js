@@ -2,6 +2,7 @@ import { streamText, convertToModelMessages, tool, jsonSchema } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { findFreeSlots } from '@/lib/calendar';
 import { createTodo, getTodos } from '@/lib/todos';
+import { lookupContact } from '@/lib/contacts';
 
 export async function POST(req) {
   const body = await req.json();
@@ -156,6 +157,26 @@ export async function POST(req) {
               attendees,
             },
           };
+        },
+      }),
+      contactLookup: tool({
+        description: 'Look up contact information by name. Returns email, timezone, and phone. Use this when user asks for someone\'s contact info, email, or timezone.',
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Contact name to look up',
+            },
+          },
+          required: ['name'],
+        }),
+        execute: async ({ name }) => {
+          const contact = await lookupContact(name);
+          if (!contact) {
+            return { found: false, name, message: `Contact "${name}" not found` };
+          }
+          return { found: true, ...contact };
         },
       }),
     },

@@ -2,6 +2,7 @@ import EmailDraft from './EmailDraft';
 import FreeSlots from './FreeSlots';
 import TodoCreate from './TodoCreate';
 import CalendarCreateEvent from './CalendarCreateEvent';
+import ContactLookup from './ContactLookup';
 import GenericTool from './GenericTool';
 
 const toolComponents = {
@@ -9,6 +10,7 @@ const toolComponents = {
   findFreeSlots: FreeSlots,
   todoCreate: TodoCreate,
   calendarCreateEvent: CalendarCreateEvent,
+  contactLookup: ContactLookup,
 };
 
 export default function ToolRenderer({ part }) {
