@@ -18,16 +18,22 @@ export async function POST(req) {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // Guardrail: 30s timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
   const result = await streamText({
     model: openai('gpt-4o'),
+    abortSignal: controller.signal,
+    maxRetries: 3, // Guardrail: retry up to 3 times
     system: `You are a helpful personal assistant that manages calendar, emails, and todos. Today's date is ${today}.
 
-When a task requires multiple steps:
-1. Call the necessary tools in sequence
-2. Use results from previous tools to inform the next tool call
-3. For meeting scheduling: first find free slots, then draft the email with options
+    When a task requires multiple steps:
+    1. Call the necessary tools in sequence
+    2. Use results from previous tools to inform the next tool call
+    3. For meeting scheduling: first find free slots, then draft the email with options
 
-Always be proactive - if user asks to schedule a meeting AND send an email, do both.`,
+    Always be proactive - if user asks to schedule a meeting AND send an email, do both.`,
     messages: modelMessages,
     maxSteps: 5,
     tools: {
@@ -155,5 +161,6 @@ Always be proactive - if user asks to schedule a meeting AND send an email, do b
     },
   });
 
+  clearTimeout(timeout);
   return result.toUIMessageStreamResponse();
 }
