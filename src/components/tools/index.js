@@ -3,6 +3,7 @@ import FreeSlots from './FreeSlots';
 import TodoCreate from './TodoCreate';
 import CalendarCreateEvent from './CalendarCreateEvent';
 import ContactLookup from './ContactLookup';
+import ScheduleMeeting from './ScheduleMeeting';
 import GenericTool from './GenericTool';
 
 const toolComponents = {
@@ -11,6 +12,7 @@ const toolComponents = {
   todoCreate: TodoCreate,
   calendarCreateEvent: CalendarCreateEvent,
   contactLookup: ContactLookup,
+  scheduleMeeting: ScheduleMeeting,
 };
 
 export default function ToolRenderer({ part }) {

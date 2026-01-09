@@ -29,12 +29,13 @@ export async function POST(req) {
     maxRetries: 3, // Guardrail: retry up to 3 times
     system: `You are a helpful personal assistant that manages calendar, emails, and todos. Today's date is ${today}.
 
-    When a task requires multiple steps:
-    1. Call the necessary tools in sequence
-    2. Use results from previous tools to inform the next tool call
-    3. For meeting scheduling: first find free slots, then draft the email with options
+For scheduling meetings with someone, use the scheduleMeeting tool - it handles everything in one call:
+- Looks up contact info
+- Finds free time slots
+- Creates event + email draft preview
+- User confirms before saving
 
-    Always be proactive - if user asks to schedule a meeting AND send an email, do both.`,
+Use scheduleMeeting when user says: 约会议, schedule meeting, 安排会议, book meeting, etc.`,
     messages: modelMessages,
     maxSteps: 5,
     tools: {
@@ -118,7 +119,7 @@ export async function POST(req) {
         },
       }),
       calendarCreateEvent: tool({
-        description: 'Create a new calendar event. Use this when user wants to add, create, or schedule an event on their calendar. The event will require user confirmation before being saved.',
+        description: 'Create a new calendar event with optional email draft. Use after findFreeSlots. Include email draft info if user wants to send meeting invite. Requires user confirmation before saving.',
         inputSchema: jsonSchema({
           type: 'object',
           properties: {
@@ -143,12 +144,24 @@ export async function POST(req) {
               items: { type: 'string' },
               description: 'List of attendee names or emails (optional)',
             },
+            emailTo: {
+              type: 'string',
+              description: 'Email recipient (optional, for meeting invite)',
+            },
+            emailSubject: {
+              type: 'string',
+              description: 'Email subject (optional)',
+            },
+            emailBody: {
+              type: 'string',
+              description: 'Email body with meeting time options (optional)',
+            },
           },
           required: ['title', 'date', 'startTime', 'endTime'],
         }),
-        execute: async ({ title, date, startTime, endTime, attendees = [] }) => {
+        execute: async ({ title, date, startTime, endTime, attendees = [], emailTo, emailSubject, emailBody }) => {
           // Return preview for confirmation - NOT saved yet
-          return {
+          const result = {
             pending: true,
             event: {
               title,
@@ -157,6 +170,15 @@ export async function POST(req) {
               attendees,
             },
           };
+          // Include email draft if provided
+          if (emailTo && emailSubject && emailBody) {
+            result.emailDraft = {
+              to: emailTo,
+              subject: emailSubject,
+              body: emailBody,
+            };
+          }
+          return result;
         },
       }),
       contactLookup: tool({
@@ -177,6 +199,93 @@ export async function POST(req) {
             return { found: false, name, message: `Contact "${name}" not found` };
           }
           return { found: true, ...contact };
+        },
+      }),
+      scheduleMeeting: tool({
+        description: 'Schedule a meeting with someone. Looks up contact, finds free slots, creates event + email draft. Use for: 约会议, schedule meeting, 安排会议, book meeting.',
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            attendeeName: {
+              type: 'string',
+              description: 'Name of the person to meet with',
+            },
+            date: {
+              type: 'string',
+              description: 'Date in YYYY-MM-DD format',
+            },
+            duration: {
+              type: 'number',
+              description: 'Duration in minutes (default 30)',
+            },
+            purpose: {
+              type: 'string',
+              description: 'Purpose/topic of the meeting',
+            },
+            preferredTime: {
+              type: 'string',
+              description: 'Preferred time of day: morning, afternoon, or specific time like 14:00',
+            },
+          },
+          required: ['attendeeName', 'date'],
+        }),
+        execute: async ({ attendeeName, date, duration = 30, purpose = 'Meeting', preferredTime }) => {
+          // 1. Look up contact
+          const contact = await lookupContact(attendeeName);
+
+          // 2. Find free slots
+          const slots = await findFreeSlots(date);
+
+          // 3. Pick best slot based on preference
+          let selectedSlot = slots[0]; // default to first
+          if (preferredTime === 'afternoon') {
+            selectedSlot = slots.find(s => parseInt(s.start.split(':')[0]) >= 12) || slots[0];
+          } else if (preferredTime === 'morning') {
+            selectedSlot = slots.find(s => parseInt(s.start.split(':')[0]) < 12) || slots[0];
+          } else if (preferredTime && preferredTime.includes(':')) {
+            const prefHour = parseInt(preferredTime.split(':')[0]);
+            selectedSlot = slots.find(s => parseInt(s.start.split(':')[0]) >= prefHour) || slots[0];
+          }
+
+          if (!selectedSlot) {
+            return { error: true, message: `No free slots available on ${date}` };
+          }
+
+          // Calculate end time
+          const [startHour, startMin] = selectedSlot.start.split(':').map(Number);
+          const endMinutes = startHour * 60 + startMin + duration;
+          const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
+
+          // 4. Generate email draft
+          const emailTo = contact?.email || `${attendeeName.toLowerCase()}@example.com`;
+          const emailBody = `Hi ${attendeeName},
+
+I'd like to schedule a ${duration}-minute meeting with you on ${date}.
+
+Proposed time: ${selectedSlot.start} - ${endTime}
+
+Topic: ${purpose}
+
+Please let me know if this works for you.
+
+Best regards`;
+
+          return {
+            pending: true,
+            freeSlots: slots.slice(0, 3), // show top 3 options
+            event: {
+              title: `${purpose} with ${attendeeName}`,
+              start: `${date}T${selectedSlot.start}:00`,
+              end: `${date}T${endTime}:00`,
+              attendees: [attendeeName],
+            },
+            emailDraft: {
+              to: emailTo,
+              subject: `Meeting Request: ${purpose}`,
+              body: emailBody,
+            },
+            contact: contact || { name: attendeeName, email: emailTo },
+          };
         },
       }),
     },

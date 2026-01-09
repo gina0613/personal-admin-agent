@@ -2,16 +2,14 @@
 
 import { useState } from 'react';
 
-export default function CalendarCreateEvent({ part }) {
+export default function ScheduleMeeting({ part }) {
   const [status, setStatus] = useState('pending'); // pending, confirming, confirmed, cancelled
   const [savedEvent, setSavedEvent] = useState(null);
 
   const output = part.output;
-  const event = output?.event;
-  const emailDraft = output?.emailDraft;
 
   const handleConfirm = async () => {
-    if (!event) return;
+    if (!output?.event) return;
 
     setStatus('confirming');
 
@@ -20,10 +18,10 @@ export default function CalendarCreateEvent({ part }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: event.title,
-          start: event.start,
-          end: event.end,
-          attendees: event.attendees,
+          title: output.event.title,
+          start: output.event.start,
+          end: output.event.end,
+          attendees: output.event.attendees,
         }),
       });
 
@@ -57,6 +55,7 @@ export default function CalendarCreateEvent({ part }) {
     });
   };
 
+  // Loading state
   if (part.state !== 'output-available' || !output) {
     return (
       <div style={{
@@ -67,11 +66,28 @@ export default function CalendarCreateEvent({ part }) {
         border: '1px solid #2196f3',
         fontSize: 14
       }}>
-        <div style={{ color: '#1565c0' }}>Creating event...</div>
+        <div style={{ color: '#1565c0' }}>Scheduling meeting...</div>
       </div>
     );
   }
 
+  // Error state
+  if (output.error) {
+    return (
+      <div style={{
+        margin: '8px 0',
+        padding: 12,
+        background: '#ffebee',
+        borderRadius: 8,
+        border: '1px solid #ef5350',
+        fontSize: 14
+      }}>
+        <div style={{ color: '#c62828' }}>{output.message}</div>
+      </div>
+    );
+  }
+
+  // Cancelled state
   if (status === 'cancelled') {
     return (
       <div style={{
@@ -82,11 +98,12 @@ export default function CalendarCreateEvent({ part }) {
         border: '1px solid #ef5350',
         fontSize: 14
       }}>
-        <div style={{ color: '#c62828' }}>Event creation cancelled</div>
+        <div style={{ color: '#c62828' }}>Meeting scheduling cancelled</div>
       </div>
     );
   }
 
+  // Confirmed state
   if (status === 'confirmed' && savedEvent) {
     return (
       <div style={{ margin: '8px 0' }}>
@@ -98,19 +115,14 @@ export default function CalendarCreateEvent({ part }) {
           fontSize: 14
         }}>
           <div style={{ fontWeight: 500, marginBottom: 8, color: '#2e7d32' }}>
-            Event Created
+            Meeting Scheduled!
           </div>
           <div style={{ fontWeight: 600 }}>{savedEvent.title}</div>
           <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
             {formatDateTime(savedEvent.start)} - {formatDateTime(savedEvent.end).split(', ').pop()}
           </div>
-          {savedEvent.attendees?.length > 0 && (
-            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-              Attendees: {savedEvent.attendees.join(', ')}
-            </div>
-          )}
         </div>
-        {emailDraft && (
+        {output.emailDraft && (
           <div style={{
             marginTop: 8,
             padding: 12,
@@ -120,89 +132,121 @@ export default function CalendarCreateEvent({ part }) {
             fontSize: 14
           }}>
             <div style={{ fontWeight: 500, marginBottom: 8, color: '#1565c0' }}>
-              Email Draft (Ready to Send)
+              Email Ready to Send
             </div>
-            <div style={{ fontSize: 12, color: '#666' }}>To: {emailDraft.to}</div>
-            <div style={{ fontWeight: 600, marginTop: 4 }}>{emailDraft.subject}</div>
-            <div style={{ marginTop: 8, padding: 8, background: '#fff', borderRadius: 4, whiteSpace: 'pre-wrap' }}>
-              {emailDraft.body}
-            </div>
+            <div style={{ fontSize: 12, color: '#666' }}>To: {output.emailDraft.to}</div>
+            <div style={{ fontWeight: 600, marginTop: 4 }}>{output.emailDraft.subject}</div>
           </div>
         )}
       </div>
     );
   }
 
+  // Pending confirmation state
   return (
     <div style={{ margin: '8px 0' }}>
+      {/* Free Slots */}
+      {output.freeSlots && output.freeSlots.length > 0 && (
+        <div style={{
+          padding: 12,
+          background: '#e8eaf6',
+          borderRadius: 8,
+          border: '1px solid #7986cb',
+          fontSize: 14,
+          marginBottom: 8
+        }}>
+          <div style={{ fontWeight: 500, marginBottom: 8, color: '#3949ab' }}>
+            Available Time Slots
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {output.freeSlots.map((slot, i) => (
+              <span key={i} style={{
+                padding: '4px 8px',
+                background: '#fff',
+                borderRadius: 4,
+                fontSize: 12
+              }}>
+                {slot.start} - {slot.end}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Event Preview */}
       <div style={{
         padding: 12,
         background: '#fff3e0',
         borderRadius: 8,
         border: '1px solid #ff9800',
-        fontSize: 14
+        fontSize: 14,
+        marginBottom: 8
       }}>
         <div style={{ fontWeight: 500, marginBottom: 8, color: '#e65100' }}>
-          Confirm New Event
+          Confirm Meeting
         </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600 }}>{event?.title}</div>
-          <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
-            {event && formatDateTime(event.start)} - {event && formatDateTime(event.end).split(', ').pop()}
+        <div style={{ fontWeight: 600 }}>{output.event?.title}</div>
+        <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+          {output.event && formatDateTime(output.event.start)} - {output.event && formatDateTime(output.event.end).split(', ').pop()}
+        </div>
+        {output.contact && (
+          <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+            With: {output.contact.name} ({output.contact.email})
           </div>
-          {event?.attendees?.length > 0 && (
-            <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-              Attendees: {event.attendees.join(', ')}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Email Draft Preview */}
-      {emailDraft && (
+      {output.emailDraft && (
         <div style={{
-          marginTop: 8,
           padding: 12,
           background: '#f3e5f5',
           borderRadius: 8,
           border: '1px solid #ab47bc',
-          fontSize: 14
+          fontSize: 14,
+          marginBottom: 8
         }}>
           <div style={{ fontWeight: 500, marginBottom: 8, color: '#7b1fa2' }}>
-            Email Draft Preview
+            Email Draft
           </div>
-          <div style={{ fontSize: 12, color: '#666' }}>To: {emailDraft.to}</div>
-          <div style={{ fontWeight: 600, marginTop: 4 }}>{emailDraft.subject}</div>
-          <div style={{ marginTop: 8, padding: 8, background: '#fff', borderRadius: 4, whiteSpace: 'pre-wrap', fontSize: 13 }}>
-            {emailDraft.body}
+          <div style={{ fontSize: 12, color: '#666' }}>To: {output.emailDraft.to}</div>
+          <div style={{ fontWeight: 600, marginTop: 4 }}>{output.emailDraft.subject}</div>
+          <div style={{
+            marginTop: 8,
+            padding: 8,
+            background: '#fff',
+            borderRadius: 4,
+            whiteSpace: 'pre-wrap',
+            fontSize: 13
+          }}>
+            {output.emailDraft.body}
           </div>
         </div>
       )}
 
       {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={handleConfirm}
           disabled={status === 'confirming'}
           style={{
-            padding: '6px 16px',
+            padding: '8px 20px',
             background: status === 'confirming' ? '#ccc' : '#4caf50',
             color: '#fff',
             border: 'none',
             borderRadius: 4,
             cursor: status === 'confirming' ? 'not-allowed' : 'pointer',
             fontSize: 14,
+            fontWeight: 500,
           }}
         >
-          {status === 'confirming' ? 'Saving...' : 'Confirm'}
+          {status === 'confirming' ? 'Saving...' : 'Confirm & Create'}
         </button>
         <button
           onClick={handleCancel}
           disabled={status === 'confirming'}
           style={{
-            padding: '6px 16px',
+            padding: '8px 20px',
             background: '#fff',
             color: '#666',
             border: '1px solid #ccc',
